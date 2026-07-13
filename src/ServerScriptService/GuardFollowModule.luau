@@ -2,6 +2,46 @@ local GuardFollowModule = {}
 
 local activeChases: {[Model]: number} = {}
 local DEFAULT_R6_WALK_ANIMATION = "rbxassetid://180426354"
+local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
+local ServerStorage = game:GetService("ServerStorage")
+local captureAnimationId: string? = nil
+
+local function playCaptureAnimation(humanoid: Humanoid): AnimationTrack?
+	if not captureAnimationId then
+		local swordAnimations = ServerStorage:FindFirstChild("R6SwordAnimations")
+		local sequence = swordAnimations and swordAnimations:FindFirstChild("Sword Swing", true)
+		sequence = sequence or ServerStorage:FindFirstChild("Automatic Save", true)
+		if not sequence or not sequence:IsA("KeyframeSequence") then
+			warn("[GuardFollow] No capture KeyframeSequence was found in ServerStorage.")
+			return nil
+		end
+
+		local success, registeredId = pcall(function()
+			return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)
+		end)
+		if not success then
+			warn("[GuardFollow] Could not register the capture KeyframeSequence.")
+			return nil
+		end
+		captureAnimationId = registeredId
+	end
+
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = captureAnimationId
+	local success, track = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+	if not success or not track then
+		animation:Destroy()
+		return nil
+	end
+
+	track.Looped = false
+	track.Priority = Enum.AnimationPriority.Action
+	track:Play(0.1)
+	return track
+end
 
 local function startWalkAnimation(guard: Model, humanoid: Humanoid): AnimationTrack?
 	if not guard:FindFirstChildWhichIsA("Motor6D", true) then
@@ -99,7 +139,12 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 
 			local flatOffset = Vector3.new(targetRoot.Position.X - root.Position.X, 0, targetRoot.Position.Z - root.Position.Z)
 			if flatOffset.Magnitude <= captureDistance then
+				local captureTrack = playCaptureAnimation(humanoid)
+				task.wait(0.25)
 				targetHumanoid.Health = 0
+				if captureTrack then
+					captureTrack:Stop(0.1)
+				end
 				break
 			end
 			humanoid:MoveTo(Vector3.new(targetRoot.Position.X, root.Position.Y, targetRoot.Position.Z))
