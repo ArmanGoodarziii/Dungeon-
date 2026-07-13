@@ -1,88 +1,108 @@
 local Players = game:GetService("Players")
-local ServerScriptService = game:GetService("ServerScriptService")
+local GuardFollowModule = require(game:GetService("ServerScriptService"):WaitForChild("GuardFollowModule"))
 
-local GuardFollowModule = require(ServerScriptService:WaitForChild("GuardFollowModule"))
-
-local GUARD_BY_TRIGGER_NAME = {
-	["Trigger 1"] = "DungeonGuard_03_ChiefWarden",
-	["Trigger 2"] = "DungeonGuard_01_PrisonJailer",
-	["Trigger 3"] = "DungeonGuard_02_ArmoredSpearman",
+local GUARD_BY_INDEX = {
+	["1"] = "Knight of Redcliff",
+	["2"] = "Knight",
+	["3"] = "Undead Knight",
 }
 
-local boundTriggers: {[BasePart]: boolean} = {}
-local debounce: {[Player]: number} = {}
+local activePlayers: {[BasePart]: {[Player]: boolean}} = {}
 
-local function trim(text: string): string
-	return string.gsub(text, "^%s*(.-)%s*$", "%1")
+local function trim(value: string): string
+	return string.gsub(value, "^%s*(.-)%s*$", "%1")
 end
 
-local function getForest(): Instance?
+local function getTriggerIndex(trigger: BasePart): string?
+	return string.match(trigger.Name, "(%d+)%s*$")
+end
+
+local function getTriggerFolder(): Instance?
+	local forest: Instance? = nil
 	for _, child in ipairs(workspace:GetChildren()) do
 		if trim(child.Name) == "Forest" then
+			forest = child
+			break
+		end
+	end
+	if not forest then
+		return nil
+	end
+
+	for _, child in ipairs(forest:GetChildren()) do
+		local normalized = string.lower(trim(child.Name)):gsub("[^%a]", "")
+		if normalized == "followplayertrigger" or normalized == "followplayertriggers" then
 			return child
 		end
 	end
 	return nil
 end
 
-local function getGuardFolder(): Folder?
-	for _, instance in ipairs(workspace:GetDescendants()) do
-		if instance:IsA("Folder") and instance.Name == "01_GuardCharacters" then
-			return instance
-		end
+local function playerIsInside(player: Player, trigger: BasePart): boolean
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return false
 	end
-	return nil
+	local point = trigger.CFrame:PointToObjectSpace(root.Position)
+	local halfSize = trigger.Size / 2
+	return math.abs(point.X) <= halfSize.X
+		and math.abs(point.Z) <= halfSize.Z
+		and math.abs(point.Y) <= halfSize.Y + 6
 end
 
-local function getGuard(triggerName: string): Model?
-	local guardFolder = getGuardFolder()
-	local guardName = GUARD_BY_TRIGGER_NAME[triggerName]
-	local guard = guardFolder and guardName and guardFolder:FindFirstChild(guardName)
-	if guard and guard:IsA("Model") then
-		return guard
-	end
-	return nil
+local function getGuard(trigger: BasePart): Model?
+	local name = GUARD_BY_INDEX[getTriggerIndex(trigger)]
+	local guard = name and workspace:FindFirstChild(name)
+	return guard and guard:IsA("Model") and guard or nil
 end
 
-local function bindTrigger(trigger: BasePart)
-	if boundTriggers[trigger] or not GUARD_BY_TRIGGER_NAME[trigger.Name] then
+local function startChase(trigger: BasePart, player: Player)
+	activePlayers[trigger] = activePlayers[trigger] or {}
+	if activePlayers[trigger][player] then
 		return
 	end
-	boundTriggers[trigger] = true
-	trigger.Touched:Connect(function(hit: BasePart)
-		local character = hit:FindFirstAncestorOfClass("Model")
-		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player then
-			return
-		end
-
-		local now = os.clock()
-		if debounce[player] and now - debounce[player] < 0.5 then
-			return
-		end
-		debounce[player] = now
-
-		local guard = getGuard(trigger.Name)
-		if guard then
-			GuardFollowModule.Start(guard, player, {CaptureDistance = 5})
-		else
-			warn(("[ForestGuardTrigger] No guard is assigned to %s."):format(trigger.Name))
-		end
-	end)
-	warn(("[ForestGuardTrigger] %s is bound to %s."):format(trigger.Name, GUARD_BY_TRIGGER_NAME[trigger.Name]))
+	local guard = getGuard(trigger)
+	if not guard then
+		return
+	end
+	activePlayers[trigger][player] = true
+	GuardFollowModule.Start(guard, player, {
+		CaptureDistance = 5,
+		IsTargetValid = function(targetPlayer: Player)
+			return playerIsInside(targetPlayer, trigger)
+		end,
+	})
 end
 
-task.spawn(function()
-	while true do
-		local forest = getForest()
-		local triggerFolder = forest and forest:FindFirstChild("FollowPlayerTrigger")
-		if triggerFolder then
-			for _, instance in ipairs(triggerFolder:GetDescendants()) do
-				if instance:IsA("BasePart") then
-					bindTrigger(instance)
+local function stopChase(trigger: BasePart, player: Player)
+	if not activePlayers[trigger] or not activePlayers[trigger][player] then
+		return
+	end
+	activePlayers[trigger][player] = nil
+	local guard = getGuard(trigger)
+	if guard then
+		GuardFollowModule.Stop(guard)
+	end
+end
+
+while true do
+	local folder = getTriggerFolder()
+	if folder then
+		for _, trigger in ipairs(folder:GetDescendants()) do
+			if trigger:IsA("BasePart") and GUARD_BY_INDEX[getTriggerIndex(trigger)] then
+				trigger.Anchored = true
+				trigger.CanCollide = false
+				trigger.CanTouch = true
+				trigger.CanQuery = false
+				for _, player in ipairs(Players:GetPlayers()) do
+					if playerIsInside(player, trigger) then
+						startChase(trigger, player)
+					else
+						stopChase(trigger, player)
+					end
 				end
 			end
 		end
-		task.wait(1)
 	end
-end)
+	task.wait(0.2)
+end
