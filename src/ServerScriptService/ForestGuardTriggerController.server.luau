@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local GuardFollowModule = require(game:GetService("ServerScriptService"):WaitForChild("GuardFollowModule"))
 
 local GUARD_BY_INDEX = {
-	["1"] = "Knight of Redcliff",
+	["1"] = "NewKnight",
 	["2"] = "Knight",
 	["3"] = "Undead Knight",
 }

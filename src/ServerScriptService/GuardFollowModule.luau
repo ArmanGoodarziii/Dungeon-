@@ -1,6 +1,29 @@
 local GuardFollowModule = {}
 
 local activeChases: {[Model]: number} = {}
+local DEFAULT_R6_WALK_ANIMATION = "rbxassetid://180426354"
+
+local function startWalkAnimation(guard: Model, humanoid: Humanoid): AnimationTrack?
+	if not guard:FindFirstChildWhichIsA("Motor6D", true) then
+		return nil
+	end
+
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = guard:GetAttribute("WalkAnimationId") or DEFAULT_R6_WALK_ANIMATION
+	local success, track = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+	if not success or not track then
+		animation:Destroy()
+		return nil
+	end
+
+	track.Looped = true
+	track.Priority = Enum.AnimationPriority.Movement
+	track:Play(0.15)
+	return track
+end
 
 local function getPlayerParts(player: Player): (Humanoid?, BasePart?)
 	local character = player.Character
@@ -62,6 +85,7 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 	humanoid.WalkSpeed = (options and options.WalkSpeed) or guard:GetAttribute("ChaseSpeed") or 13
 	local captureDistance = (options and options.CaptureDistance) or 5
 	local isTargetValid = options and options.IsTargetValid
+	local walkTrack = startWalkAnimation(guard, humanoid)
 
 	task.spawn(function()
 		while activeChases[guard] == token and guard.Parent and humanoid.Health > 0 do
@@ -85,6 +109,9 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 		if activeChases[guard] == token then
 			activeChases[guard] = nil
 			humanoid:Move(Vector3.zero)
+		end
+		if walkTrack then
+			walkTrack:Stop(0.15)
 		end
 	end)
 end
