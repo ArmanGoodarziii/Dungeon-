@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local updateTimerEvent = ReplicatedStorage:WaitForChild("UpdateTimer")
-local showWinUI = ReplicatedStorage:WaitForChild("ShowWinUI")
 
 local startPortal = workspace:WaitForChild("StartPortal")
 local startTrigger = startPortal:WaitForChild("TriggerPart")
@@ -58,7 +57,6 @@ stopTrigger.Touched:Connect(function(hit)
 	playerStartTimes[player] = nil
 
 	updateTimerEvent:FireClient(player, "Stop")
-	showWinUI:FireClient(player, totalTime)
 
 	print(player.Name .. " finished in " .. string.format("%.2f", totalTime) .. " seconds.")
 

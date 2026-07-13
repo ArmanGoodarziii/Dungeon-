@@ -1,4 +1,9 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local showFinalPlaceSuccess = ReplicatedStorage:WaitForChild("ShowFinalPlaceSuccess")
+local danceAnimation = ServerStorage:WaitForChild("FinalPlaceDanceAnimation")
 
 local function findChildByTrimmedName(parent: Instance, expectedName: string): Instance?
 	for _, child in ipairs(parent:GetChildren()) do
@@ -17,6 +22,28 @@ local portal = teleportModel and teleportModel:FindFirstChild("Portal")
 if not finalPlace or not finalPlace:IsA("Model") or not portal or not portal:IsA("BasePart") then
 	warn("[ForestPortal] Teleport.Portal or FinalPlace was not found.")
 	return
+end
+
+local function playFinalPlaceDance(character: Model)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or not danceAnimation:IsA("Animation") then
+		return
+	end
+
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator")
+	animator.Parent = humanoid
+
+	local track = animator:LoadAnimation(danceAnimation)
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+	track:Play(0.15)
+
+	task.delay(20, function()
+		if track.IsPlaying then
+			track:Stop(0.2)
+		end
+		track:Destroy()
+	end)
 end
 
 local debounce: {[Player]: boolean} = {}
@@ -38,7 +65,11 @@ portal.Touched:Connect(function(hit: BasePart)
 	local finalCFrame, finalSize = finalPlace:GetBoundingBox()
 	local uprightSpawnPosition = finalCFrame.Position + Vector3.new(0, finalSize.Y / 2 + 4, 0)
 	character:PivotTo(CFrame.new(uprightSpawnPosition))
-	task.delay(1, function()
+	showFinalPlaceSuccess:FireClient(player)
+	playFinalPlaceDance(character)
+	-- A character has several touching parts; keep this active while the success
+	-- notification is on screen so one portal use cannot show it repeatedly.
+	task.delay(6, function()
 		debounce[player] = nil
 	end)
 end)
