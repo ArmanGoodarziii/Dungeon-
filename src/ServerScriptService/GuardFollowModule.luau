@@ -17,8 +17,11 @@ local function prepareGuard(guard: Model, humanoid: Humanoid, root: BasePart)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = {guard}
 	params.IgnoreWater = true
+	local configuredHipHeight = guard:GetAttribute("GuardHipHeight")
 	local floor = workspace:Raycast(root.Position + Vector3.new(0, 2, 0), Vector3.new(0, -100, 0), params)
-	if floor then
+	if typeof(configuredHipHeight) == "number" then
+		humanoid.HipHeight = configuredHipHeight
+	elseif floor then
 		humanoid.HipHeight = math.max(2, root.Position.Y - floor.Position.Y - root.Size.Y / 2)
 	else
 		humanoid.HipHeight = 2
