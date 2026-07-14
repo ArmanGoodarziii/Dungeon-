@@ -2,6 +2,7 @@ local GuardFollowModule = {}
 
 local activeChases: {[Model]: number} = {}
 local activePatrols: {[Model]: number} = {}
+local activeWalkTracks: {[Model]: AnimationTrack} = {}
 local random = Random.new()
 local DEFAULT_R6_WALK_ANIMATION = "rbxassetid://180426354"
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
@@ -50,6 +51,12 @@ local function startWalkAnimation(guard: Model, humanoid: Humanoid): AnimationTr
 		return nil
 	end
 
+	local previousTrack = activeWalkTracks[guard]
+	if previousTrack then
+		previousTrack:Stop(0.1)
+		activeWalkTracks[guard] = nil
+	end
+
 	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
 	local animation = Instance.new("Animation")
 	animation.AnimationId = guard:GetAttribute("WalkAnimationId") or DEFAULT_R6_WALK_ANIMATION
@@ -64,7 +71,19 @@ local function startWalkAnimation(guard: Model, humanoid: Humanoid): AnimationTr
 	track.Looped = true
 	track.Priority = Enum.AnimationPriority.Movement
 	track:Play(0.15)
+	activeWalkTracks[guard] = track
 	return track
+end
+
+local function stopWalkAnimation(guard: Model, track: AnimationTrack?)
+	if not track then
+		return
+	end
+	track:Stop(0.15)
+	track:Destroy()
+	if activeWalkTracks[guard] == track then
+		activeWalkTracks[guard] = nil
+	end
 end
 
 local function getPlayerParts(player: Player): (Humanoid?, BasePart?)
@@ -78,6 +97,14 @@ local function getPlayerParts(player: Player): (Humanoid?, BasePart?)
 end
 
 local function prepareGuard(guard: Model, humanoid: Humanoid, root: BasePart)
+	-- The toolbox NPCs include separate animation controllers that fight the
+	-- shared guard walk track.  Keep movement animation under this module only.
+	for _, descendant in ipairs(guard:GetDescendants()) do
+		if descendant:IsA("BaseScript") and (descendant.Name == "Animate" or descendant.Name == "NewKnightWalkAnimation") then
+			descendant.Disabled = true
+		end
+	end
+
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = {guard}
@@ -159,8 +186,8 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 			activeChases[guard] = nil
 			humanoid:Move(Vector3.zero)
 		end
-		if walkTrack then
-			walkTrack:Stop(0.15)
+	if walkTrack then
+			stopWalkAnimation(guard, walkTrack)
 		end
 	end)
 end
@@ -206,7 +233,7 @@ function GuardFollowModule.StartPatrol(guard: Model, patrolArea: BasePart, optio
 			humanoid:Move(Vector3.zero)
 		end
 		if walkTrack then
-			walkTrack:Stop(0.15)
+			stopWalkAnimation(guard, walkTrack)
 		end
 	end)
 end

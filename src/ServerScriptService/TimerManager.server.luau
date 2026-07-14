@@ -1,15 +1,37 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local updateTimerEvent = ReplicatedStorage:WaitForChild("UpdateTimer")
 
 local startPortal = workspace:WaitForChild("StartPortal")
 local startTrigger = startPortal:WaitForChild("TriggerPart")
-local stopPortal = workspace:WaitForChild("StopPortal")
-local stopTrigger = stopPortal:WaitForChild("TriggerPart")
 
 -- Stores each player's start time
 local playerStartTimes = {}
+
+local function finishTimer(player: Player): number?
+	local startTime = playerStartTimes[player]
+	if not startTime then
+		return nil
+	end
+
+	local totalTime = os.clock() - startTime
+	playerStartTimes[player] = nil
+	updateTimerEvent:FireClient(player, "Stop")
+	return totalTime
+end
+
+local finishTimerFunction = ServerScriptService:FindFirstChild("FinishTimer")
+if not finishTimerFunction then
+	finishTimerFunction = Instance.new("BindableFunction")
+	finishTimerFunction.Name = "FinishTimer"
+	finishTimerFunction.Parent = ServerScriptService
+end
+
+if finishTimerFunction:IsA("BindableFunction") then
+	finishTimerFunction.OnInvoke = finishTimer
+end
 
 -- Start the timer
 startTrigger.Touched:Connect(function(hit)
@@ -33,32 +55,6 @@ startTrigger.Touched:Connect(function(hit)
 	updateTimerEvent:FireClient(player, "Start")
 
 	print(player.Name .. " started the timer.")
-
-end)
-
--- Stop the timer
-stopTrigger.Touched:Connect(function(hit)
-
-	local character = hit.Parent
-	local player = Players:GetPlayerFromCharacter(character)
-
-	if not player then
-		return
-	end
-
-	local startTime = playerStartTimes[player]
-
-	if not startTime then
-		return
-	end
-
-	local totalTime = os.clock() - startTime
-
-	playerStartTimes[player] = nil
-
-	updateTimerEvent:FireClient(player, "Stop")
-
-	print(player.Name .. " finished in " .. string.format("%.2f", totalTime) .. " seconds.")
 
 end)
 
