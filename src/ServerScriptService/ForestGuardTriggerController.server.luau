@@ -1,10 +1,10 @@
 local Players = game:GetService("Players")
 local GuardFollowModule = require(game:GetService("ServerScriptService"):WaitForChild("GuardFollowModule"))
 
-local GUARD_BY_INDEX = {
-	["1"] = "NewKnight",
-	["2"] = "Knight",
-	["3"] = "Undead Knight",
+local GUARDS_BY_INDEX = {
+	["1"] = {"NewKnight", "NewKnight_Follower"},
+	["2"] = {"Knight", "Knight_Follower"},
+	["3"] = {"Undead Knight", "Undead Knight_Follower"},
 }
 
 local activePlayers: {[BasePart]: {[Player]: boolean}} = {}
@@ -50,10 +50,15 @@ local function playerIsInside(player: Player, trigger: BasePart): boolean
 		and math.abs(point.Y) <= halfSize.Y + 6
 end
 
-local function getGuard(trigger: BasePart): Model?
-	local name = GUARD_BY_INDEX[getTriggerIndex(trigger)]
-	local guard = name and workspace:FindFirstChild(name)
-	return guard and guard:IsA("Model") and guard or nil
+local function getGuards(trigger: BasePart): {Model}
+	local guards = {}
+	for _, name in ipairs(GUARDS_BY_INDEX[getTriggerIndex(trigger)] or {}) do
+		local guard = workspace:FindFirstChild(name)
+		if guard and guard:IsA("Model") then
+			table.insert(guards, guard)
+		end
+	end
+	return guards
 end
 
 local function startChase(trigger: BasePart, player: Player)
@@ -61,17 +66,19 @@ local function startChase(trigger: BasePart, player: Player)
 	if activePlayers[trigger][player] then
 		return
 	end
-	local guard = getGuard(trigger)
-	if not guard then
+	local guards = getGuards(trigger)
+	if #guards == 0 then
 		return
 	end
 	activePlayers[trigger][player] = true
-	GuardFollowModule.Start(guard, player, {
-		CaptureDistance = 5,
-		IsTargetValid = function(targetPlayer: Player)
-			return playerIsInside(targetPlayer, trigger)
-		end,
-	})
+	for _, guard in ipairs(guards) do
+		GuardFollowModule.Start(guard, player, {
+			CaptureDistance = 5,
+			IsTargetValid = function(targetPlayer: Player)
+				return playerIsInside(targetPlayer, trigger)
+			end,
+		})
+	end
 end
 
 local function stopChase(trigger: BasePart, player: Player)
@@ -79,15 +86,13 @@ local function stopChase(trigger: BasePart, player: Player)
 		return
 	end
 	activePlayers[trigger][player] = nil
-	local guard = getGuard(trigger)
-	if guard then
+	for _, guard in ipairs(getGuards(trigger)) do
 		GuardFollowModule.Stop(guard)
 	end
 end
 
 local function patrolTrigger(trigger: BasePart)
-	local guard = getGuard(trigger)
-	if guard then
+	for _, guard in ipairs(getGuards(trigger)) do
 		GuardFollowModule.StartPatrol(guard, trigger, {
 			WalkSpeed = guard:GetAttribute("PatrolSpeed") or 6,
 		})
@@ -98,7 +103,7 @@ while true do
 	local folder = getTriggerFolder()
 	if folder then
 		for _, trigger in ipairs(folder:GetDescendants()) do
-			if trigger:IsA("BasePart") and GUARD_BY_INDEX[getTriggerIndex(trigger)] then
+			if trigger:IsA("BasePart") and GUARDS_BY_INDEX[getTriggerIndex(trigger)] then
 				trigger.Anchored = true
 				trigger.CanCollide = false
 				trigger.CanTouch = true

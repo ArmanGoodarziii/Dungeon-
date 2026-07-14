@@ -20,6 +20,7 @@ local forest = findChildByTrimmedName(workspace, "Forest")
 local finalPlace = findChildByTrimmedName(workspace, "FinalPlace")
 local teleportModel = forest and forest:FindFirstChild("Teleport")
 local portal = teleportModel and teleportModel:FindFirstChild("Portal")
+local dancePlatform = finalPlace and finalPlace:FindFirstChild("Stud Grass Platform")
 
 if not finalPlace or not finalPlace:IsA("Model") or not portal or not portal:IsA("BasePart") then
 	warn("[ForestPortal] Teleport.Portal or FinalPlace was not found.")
@@ -44,17 +45,26 @@ if not portalText then
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
 	label.Text = "COME HERE"
-	label.TextSize = 34
+	label.TextSize = 48
 	label.TextColor3 = Color3.fromRGB(255, 225, 115)
 	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	label.TextStrokeTransparency = 0.2
 	label.Parent = portalText
 end
 
-local function playFinalPlaceDance(character: Model)
+local activeDanceTracks: {[Player]: AnimationTrack} = {}
+local danceDebounce: {[Player]: boolean} = {}
+
+local function playFinalPlaceDance(player: Player, character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or not danceAnimation:IsA("Animation") then
 		return
+	end
+
+	local previousTrack = activeDanceTracks[player]
+	if previousTrack then
+		previousTrack:Stop(0.15)
+		previousTrack:Destroy()
 	end
 
 	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator")
@@ -64,13 +74,39 @@ local function playFinalPlaceDance(character: Model)
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = true
 	track:Play(0.15)
+	activeDanceTracks[player] = track
 
 	task.delay(20, function()
-		if track.IsPlaying then
+		if activeDanceTracks[player] == track and track.IsPlaying then
 			track:Stop(0.2)
 		end
-		track:Destroy()
+		if activeDanceTracks[player] == track then
+			activeDanceTracks[player] = nil
+		end
+		if track.Parent then
+			track:Destroy()
+		end
+		danceDebounce[player] = nil
 	end)
+end
+
+if dancePlatform then
+	for _, platformPart in ipairs(dancePlatform:GetDescendants()) do
+		if platformPart:IsA("BasePart") then
+			platformPart.CanTouch = true
+			platformPart.Touched:Connect(function(hit: BasePart)
+				local character = hit:FindFirstAncestorOfClass("Model")
+				local player = character and Players:GetPlayerFromCharacter(character)
+				if not player or danceDebounce[player] then
+					return
+				end
+				danceDebounce[player] = true
+				playFinalPlaceDance(player, character)
+			end)
+		end
+	end
+else
+	warn("[ForestPortal] Stud Grass Platform was not found in FinalPlace.")
 end
 
 local records: {{playerName: string, totalTime: number}} = {}
@@ -194,7 +230,6 @@ portal.Touched:Connect(function(hit: BasePart)
 		end
 	end
 	showFinalPlaceSuccess:FireClient(player)
-	playFinalPlaceDance(character)
 	-- A character has several touching parts; keep this active while the success
 	-- notification is on screen so one portal use cannot show it repeatedly.
 	task.delay(6, function()
