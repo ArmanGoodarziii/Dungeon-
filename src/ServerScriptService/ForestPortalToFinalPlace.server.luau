@@ -109,7 +109,7 @@ else
 	warn("[ForestPortal] Stud Grass Platform was not found in FinalPlace.")
 end
 
-local records: {{playerName: string, totalTime: number}} = {}
+local recordsByUserId: {[number]: {playerName: string, totalTime: number}} = {}
 local ROW_COUNT = 5
 
 local function formatTime(totalTime: number): string
@@ -187,7 +187,16 @@ local function getLeaderboardRows(): {TextLabel}?
 end
 
 local function updateLeaderboard(player: Player, totalTime: number)
-	table.insert(records, {playerName = player.Name, totalTime = totalTime})
+	local previousRecord = recordsByUserId[player.UserId]
+	if previousRecord and previousRecord.totalTime <= totalTime then
+		return
+	end
+	recordsByUserId[player.UserId] = {playerName = player.Name, totalTime = totalTime}
+
+	local records = {}
+	for _, record in pairs(recordsByUserId) do
+		table.insert(records, record)
+	end
 	table.sort(records, function(first, second)
 		return first.totalTime < second.totalTime
 	end)
