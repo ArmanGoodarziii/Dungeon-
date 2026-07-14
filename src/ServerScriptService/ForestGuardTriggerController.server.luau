@@ -85,6 +85,15 @@ local function stopChase(trigger: BasePart, player: Player)
 	end
 end
 
+local function patrolTrigger(trigger: BasePart)
+	local guard = getGuard(trigger)
+	if guard then
+		GuardFollowModule.StartPatrol(guard, trigger, {
+			WalkSpeed = guard:GetAttribute("PatrolSpeed") or 6,
+		})
+	end
+end
+
 while true do
 	local folder = getTriggerFolder()
 	if folder then
@@ -94,12 +103,26 @@ while true do
 				trigger.CanCollide = false
 				trigger.CanTouch = true
 				trigger.CanQuery = false
+				local playerInside: Player? = nil
 				for _, player in ipairs(Players:GetPlayers()) do
 					if playerIsInside(player, trigger) then
-						startChase(trigger, player)
-					else
+						playerInside = player
+						break
+					end
+				end
+
+				if playerInside then
+					startChase(trigger, playerInside)
+					for player in pairs(activePlayers[trigger] or {}) do
+						if player ~= playerInside then
+							stopChase(trigger, player)
+						end
+					end
+				else
+					for player in pairs(activePlayers[trigger] or {}) do
 						stopChase(trigger, player)
 					end
+					patrolTrigger(trigger)
 				end
 			end
 		end

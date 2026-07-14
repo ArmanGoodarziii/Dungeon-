@@ -1,6 +1,8 @@
 local GuardFollowModule = {}
 
 local activeChases: {[Model]: number} = {}
+local activePatrols: {[Model]: number} = {}
+local random = Random.new()
 local DEFAULT_R6_WALK_ANIMATION = "rbxassetid://180426354"
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local ServerStorage = game:GetService("ServerStorage")
@@ -105,6 +107,7 @@ end
 
 function GuardFollowModule.Stop(guard: Model)
 	activeChases[guard] = nil
+	activePatrols[guard] = nil
 	local humanoid = guard:FindFirstChildWhichIsA("Humanoid", true)
 	if humanoid then
 		humanoid:Move(Vector3.zero)
@@ -119,6 +122,7 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 		return
 	end
 
+	activePatrols[guard] = nil
 	local token = (activeChases[guard] or 0) + 1
 	activeChases[guard] = token
 	prepareGuard(guard, humanoid, root)
@@ -153,6 +157,52 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 
 		if activeChases[guard] == token then
 			activeChases[guard] = nil
+			humanoid:Move(Vector3.zero)
+		end
+		if walkTrack then
+			walkTrack:Stop(0.15)
+		end
+	end)
+end
+
+function GuardFollowModule.StartPatrol(guard: Model, patrolArea: BasePart, options: {[string]: any}?)
+	if activeChases[guard] or activePatrols[guard] then
+		return
+	end
+
+	local humanoid = guard:FindFirstChildWhichIsA("Humanoid", true)
+	local root = guard:FindFirstChild("HumanoidRootPart", true)
+	if not humanoid or not root or not root:IsA("BasePart") then
+		warn(("[GuardFollow] %s needs a Humanoid and HumanoidRootPart."):format(guard.Name))
+		return
+	end
+
+	local token = 1
+	activePatrols[guard] = token
+	prepareGuard(guard, humanoid, root)
+	humanoid.WalkSpeed = (options and options.WalkSpeed) or guard:GetAttribute("PatrolSpeed") or 6
+	local walkTrack = startWalkAnimation(guard, humanoid)
+
+	task.spawn(function()
+		while activePatrols[guard] == token and not activeChases[guard] and guard.Parent and humanoid.Health > 0 do
+			-- Keep every patrol target safely inside the guard's own trigger area.
+			local padding = math.min(3, patrolArea.Size.X / 4, patrolArea.Size.Z / 4)
+			local x = random:NextNumber(-patrolArea.Size.X / 2 + padding, patrolArea.Size.X / 2 - padding)
+			local z = random:NextNumber(-patrolArea.Size.Z / 2 + padding, patrolArea.Size.Z / 2 - padding)
+			local worldPoint = patrolArea.CFrame:PointToWorldSpace(Vector3.new(x, 0, z))
+			humanoid:MoveTo(Vector3.new(worldPoint.X, root.Position.Y, worldPoint.Z))
+
+			-- Give the knight time to reach the point before selecting another one.
+			local travelTime = math.clamp((Vector3.new(worldPoint.X, 0, worldPoint.Z) - Vector3.new(root.Position.X, 0, root.Position.Z)).Magnitude / humanoid.WalkSpeed, 1.2, 5)
+			local elapsed = 0
+			while elapsed < travelTime and activePatrols[guard] == token and not activeChases[guard] do
+				task.wait(0.15)
+				elapsed += 0.15
+			end
+		end
+
+		if activePatrols[guard] == token then
+			activePatrols[guard] = nil
 			humanoid:Move(Vector3.zero)
 		end
 		if walkTrack then
