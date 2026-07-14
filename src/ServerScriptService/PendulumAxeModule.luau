@@ -6,8 +6,6 @@ local PendulumAxeModule = {}
 function PendulumAxeModule.Start()
 	local trapData = {}
 	local startTime = os.clock()
-	local dungeonStorages = workspace:FindFirstChild("DungeonStorages")
-	local corridor4 = dungeonStorages and dungeonStorages:FindFirstChild("Corrider-4")
 
 	local function setupTrap(trapModel, phaseOffset)
 		local pivot = trapModel:FindFirstChild("Pivot")
@@ -43,8 +41,7 @@ function PendulumAxeModule.Start()
 
 	for _, desc in ipairs(workspace:GetDescendants()) do
 		if (desc.Name == "Trap_03_PendulumAxe_Modular" or desc.Name == "New_Trap_03_PendulumAxe_Modular")
-			and desc:IsA("Model")
-			and (not corridor4 or not desc:IsDescendantOf(corridor4)) then
+			and desc:IsA("Model") then
 			local pivot = desc:FindFirstChild("Pivot")
 			if pivot then
 				local parentName = desc.Parent.Name
@@ -66,7 +63,8 @@ function PendulumAxeModule.Start()
 		-- adjacent traps alternate their swing direction instead of grouping
 		-- every trap in the same column together.
 		local isCell1 = group[1] and cell1 and group[1].model:IsDescendantOf(cell1)
-		if isCell1 then
+		local isNewTrapGroup = group[1] and group[1].model.Name == "New_Trap_03_PendulumAxe_Modular"
+		if isCell1 or isNewTrapGroup then
 			table.sort(group, function(a, b)
 				local az = a.model:FindFirstChild("Pivot").CFrame.Position.Z
 				local bz = b.model:FindFirstChild("Pivot").CFrame.Position.Z

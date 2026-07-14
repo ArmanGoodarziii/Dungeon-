@@ -15,8 +15,8 @@ end
 local billboard = Instance.new("BillboardGui")
 billboard.Name = "ComeHereText"
 billboard.Adornee = anchor
-billboard.AlwaysOnTop = true
-billboard.MaxDistance = 100
+billboard.AlwaysOnTop = false
+billboard.MaxDistance = 32
 billboard.LightInfluence = 0
 billboard.Size = UDim2.fromOffset(220, 64)
 -- Keep the label clearly above the vent opening, not beside the grate.
