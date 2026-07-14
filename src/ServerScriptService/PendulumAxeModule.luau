@@ -59,8 +59,23 @@ function PendulumAxeModule.Start()
 		end
 	end
 
+	local cellsZone3 = workspace:FindFirstChild("Cells_Zone-3")
+	local cell1 = cellsZone3 and cellsZone3:FindFirstChild("Cell_1")
 	for _, group in pairs(trapsByParent) do
-		table.sort(group, function(a, b) return a.x < b.x end)
+		-- Cell 1 is laid out in rows. Walk each row from front to back so
+		-- adjacent traps alternate their swing direction instead of grouping
+		-- every trap in the same column together.
+		local isCell1 = group[1] and cell1 and group[1].model:IsDescendantOf(cell1)
+		if isCell1 then
+			table.sort(group, function(a, b)
+				local az = a.model:FindFirstChild("Pivot").CFrame.Position.Z
+				local bz = b.model:FindFirstChild("Pivot").CFrame.Position.Z
+				if math.abs(az - bz) > 2 then return az < bz end
+				return a.x < b.x
+			end)
+		else
+			table.sort(group, function(a, b) return a.x < b.x end)
+		end
 		for i, trapInfo in ipairs(group) do
 			local phaseOffset = (i % 2 == 1) and 0 or math.pi
 			setupTrap(trapInfo.model, phaseOffset)
