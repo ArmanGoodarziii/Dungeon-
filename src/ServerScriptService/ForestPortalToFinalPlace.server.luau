@@ -3,6 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local SoundService = game:GetService("SoundService")
+local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local showFinalPlaceSuccess = ReplicatedStorage:WaitForChild("ShowFinalPlaceSuccess")
 local danceAnimation = ServerStorage:WaitForChild("FinalPlaceDanceAnimation")
@@ -39,28 +42,8 @@ if not finalPlace or not finalPlace:IsA("Model") or not portal or not portal:IsA
 end
 
 local portalText = portal:FindFirstChild("PortalText")
-if not portalText then
-	portalText = Instance.new("BillboardGui")
-	portalText.Name = "PortalText"
-	portalText.Adornee = portal
-	portalText.Size = UDim2.fromOffset(240, 70)
-	portalText.StudsOffset = Vector3.new(0, 5, 0)
-	portalText.AlwaysOnTop = false
-	portalText.MaxDistance = 32
-	portalText.LightInfluence = 0
-	portalText.Parent = portal
-
-	local label = Instance.new("TextLabel")
-	label.Name = "Label"
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBold
-	label.Text = "COME HERE"
-	label.TextSize = 48
-	label.TextColor3 = Color3.fromRGB(255, 225, 115)
-	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	label.TextStrokeTransparency = 0.2
-	label.Parent = portalText
+if portalText then
+	portalText:Destroy()
 end
 
 local activeDanceTracks: {[Player]: AnimationTrack} = {}
@@ -123,6 +106,13 @@ end
 
 local recordsByUserId: {[number]: {playerName: string, totalTime: number}} = {}
 local ROW_COUNT = 5
+
+-- Persist only the fastest completion for each player.  The ordered store keeps
+-- the ranking across servers; the companion store keeps the display name.
+local bestTimesStore = DataStoreService:GetOrderedDataStore("DungeonBestTimesV1")
+local bestTimeValuesStore = DataStoreService:GetDataStore("DungeonBestTimeValuesV1")
+local playerNamesStore = DataStoreService:GetDataStore("DungeonBestTimeNamesV1")
+local dataStoresEnabled = not RunService:IsStudio()
 
 local function formatTime(totalTime: number): string
 	local minutes = math.floor(totalTime / 60)
@@ -198,31 +188,96 @@ local function getLeaderboardRows(): {TextLabel}?
 	return rows
 end
 
+local function renderLeaderboard(records)
+	local rows = getLeaderboardRows()
+	if not rows then
+		return
+	end
+	for index, row in ipairs(rows) do
+		local record = records[index]
+		row.Text = record and string.format("%d. %s  %s", index, record.playerName, formatTime(record.totalTime))
+			or string.format("%d. ---", index)
+	end
+end
+
+local function refreshLeaderboard()
+	local records = {}
+	local success, pages = false, nil
+	if dataStoresEnabled then
+		success, pages = pcall(function()
+			return bestTimesStore:GetSortedAsync(true, ROW_COUNT)
+		end)
+	end
+	if success and pages then
+		for _, entry in ipairs(pages:GetCurrentPage()) do
+			local userId = tonumber(entry.key)
+			local hundredths = tonumber(entry.value)
+			if userId and hundredths then
+				local name = recordsByUserId[userId] and recordsByUserId[userId].playerName
+				local nameOk, storedName = pcall(function()
+					return playerNamesStore:GetAsync(entry.key)
+				end)
+				if nameOk and typeof(storedName) == "string" then name = storedName end
+				if not name then name = "Player " .. entry.key end
+				recordsByUserId[userId] = {playerName = name, totalTime = hundredths / 100}
+				table.insert(records, recordsByUserId[userId])
+			end
+		end
+	else
+		for _, record in pairs(recordsByUserId) do table.insert(records, record) end
+		table.sort(records, function(a, b) return a.totalTime < b.totalTime end)
+	end
+	renderLeaderboard(records)
+end
+
 local function updateLeaderboard(player: Player, totalTime: number)
 	local previousRecord = recordsByUserId[player.UserId]
 	if previousRecord and previousRecord.totalTime <= totalTime then
 		return
 	end
 	recordsByUserId[player.UserId] = {playerName = player.Name, totalTime = totalTime}
-
-	local records = {}
-	for _, record in pairs(recordsByUserId) do
-		table.insert(records, record)
-	end
-	table.sort(records, function(first, second)
-		return first.totalTime < second.totalTime
-	end)
-
-	local rows = getLeaderboardRows()
-	if not rows then
+	if not dataStoresEnabled then
+		refreshLeaderboard()
 		return
 	end
-
-	for index, row in ipairs(rows) do
-		local record = records[index]
-		row.Text = record and string.format("%d. %s  %s", index, record.playerName, formatTime(record.totalTime))
-			or string.format("%d. ---", index)
+	local key = tostring(player.UserId)
+	local hundredths = math.max(1, math.floor(totalTime * 100 + 0.5))
+	local saved, winner = pcall(function()
+		return bestTimeValuesStore:UpdateAsync(key, function(oldValue)
+			local oldNumber = tonumber(oldValue)
+			if oldNumber and oldNumber <= hundredths then return oldNumber end
+			return hundredths
+		end)
+	end)
+	if saved and tonumber(winner) == hundredths then
+		pcall(function() bestTimesStore:SetAsync(key, hundredths) end)
+		pcall(function() playerNamesStore:SetAsync(key, player.Name) end)
 	end
+	refreshLeaderboard()
+end
+
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(function()
+		if dataStoresEnabled then
+			local ok, value = pcall(function() return bestTimesStore:GetAsync(tostring(player.UserId)) end)
+			if ok and tonumber(value) then
+				recordsByUserId[player.UserId] = {playerName = player.Name, totalTime = tonumber(value) / 100}
+			end
+		end
+		refreshLeaderboard()
+	end)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(function()
+		if dataStoresEnabled then
+			local ok, value = pcall(function() return bestTimesStore:GetAsync(tostring(player.UserId)) end)
+			if ok and tonumber(value) then
+				recordsByUserId[player.UserId] = {playerName = player.Name, totalTime = tonumber(value) / 100}
+			end
+		end
+		refreshLeaderboard()
+	end)
 end
 
 local debounce: {[Player]: boolean} = {}

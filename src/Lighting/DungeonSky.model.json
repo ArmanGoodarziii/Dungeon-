@@ -1,0 +1,16 @@
+{
+  "className": "Sky",
+  "properties": {
+    "SkyboxBk": "",
+    "SkyboxDn": "",
+    "SkyboxFt": "",
+    "SkyboxLf": "",
+    "SkyboxRt": "",
+    "SkyboxUp": "",
+    "CelestialBodiesShown": false,
+    "StarCount": 0,
+    "SunAngularSize": 0,
+    "MoonAngularSize": 0,
+    "SkyboxOrientation": [0, 180, 0]
+  }
+}

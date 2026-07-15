@@ -3,9 +3,12 @@ local SoundService = game:GetService("SoundService")
 local GuardFollowModule = require(game:GetService("ServerScriptService"):WaitForChild("GuardFollowModule"))
 
 local GUARDS_BY_INDEX = {
-	["1"] = {"NewKnight", "NewKnight_Follower"},
-	["2"] = {"Knight", "Knight_Follower"},
-	["3"] = {"Undead Knight", "Undead Knight_Follower"},
+	["1"] = {"NewKnight"},
+	["2"] = {"NewKnight_Follower"},
+	["3"] = {"Knight"},
+	["4"] = {"Knight_Follower"},
+	["5"] = {"Undead Knight"},
+	["6"] = {"Undead Knight_Follower"},
 }
 
 local activePlayers: {[BasePart]: {[Player]: boolean}} = {}
@@ -140,7 +143,7 @@ while true do
 				if playerInside then
 					if getTriggerIndex(trigger) == "1" then
 						startGuardAlert(playerInside)
-					elseif getTriggerIndex(trigger) == "3" then
+					elseif getTriggerIndex(trigger) == "6" then
 						-- Keep the alert active through the final trigger; stop it on exit.
 					end
 					startChase(trigger, playerInside)
@@ -150,7 +153,7 @@ while true do
 						end
 					end
 				else
-					if getTriggerIndex(trigger) == "3" then
+					if getTriggerIndex(trigger) == "6" then
 						for player in pairs(activePlayers[trigger] or {}) do
 							stopGuardAlert(player)
 						end

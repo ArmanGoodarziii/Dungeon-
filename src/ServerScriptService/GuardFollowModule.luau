@@ -22,22 +22,27 @@ end
 
 local function playCaptureAnimation(humanoid: Humanoid): AnimationTrack?
 	if not captureAnimationId then
+		local storedAnimation = ServerStorage:FindFirstChild("KnightAttackAnimation")
+		if storedAnimation and storedAnimation:IsA("Animation") and storedAnimation.AnimationId ~= "" then
+			captureAnimationId = storedAnimation.AnimationId
+		end
+	end
+	if not captureAnimationId then
 		local swordAnimations = ServerStorage:FindFirstChild("R6SwordAnimations")
 		local sequence = swordAnimations and swordAnimations:FindFirstChild("Sword Swing", true)
 		sequence = sequence or ServerStorage:FindFirstChild("Automatic Save", true)
 		if not sequence or not sequence:IsA("KeyframeSequence") then
-			warn("[GuardFollow] No capture KeyframeSequence was found in ServerStorage.")
-			return nil
+			captureAnimationId = "rbxassetid://522635514"
+		else
+			local success, registeredId = pcall(function()
+				return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)
+			end)
+			if success then
+				captureAnimationId = registeredId
+			else
+				captureAnimationId = "rbxassetid://522635514"
+			end
 		end
-
-		local success, registeredId = pcall(function()
-			return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)
-		end)
-		if not success then
-			warn("[GuardFollow] Could not register the capture KeyframeSequence.")
-			return nil
-		end
-		captureAnimationId = registeredId
 	end
 
 	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)

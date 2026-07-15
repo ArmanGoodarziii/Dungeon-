@@ -6,19 +6,19 @@ local Lighting = game:GetService("Lighting")
 -- Balanced for consistent visibility across all zones
 -- ============================================
 Lighting.ClockTime = 14              -- Daytime base for stable ambient
-Lighting.Brightness = 1.5            -- Moderate brightness
-Lighting.ExposureCompensation = 0    -- No exposure adjustment for stability
+Lighting.Brightness = 2.0            -- Clear visibility while retaining a dark mood
+Lighting.ExposureCompensation = 0.15  -- Slight lift for shadowed corridors
 Lighting.EnvironmentDiffuseScale = 0.6
 Lighting.EnvironmentSpecularScale = 0.6
-Lighting.Ambient = Color3.fromRGB(70, 65, 80)        -- Warm grey-purple ambient for consistent base
-Lighting.OutdoorAmbient = Color3.fromRGB(60, 55, 70) -- Slightly darker outdoor
+Lighting.Ambient = Color3.fromRGB(92, 88, 108)       -- Cool fill so geometry remains readable
+Lighting.OutdoorAmbient = Color3.fromRGB(78, 74, 94) -- Darker outdoor contrast
 Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
 Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
 Lighting.GlobalShadows = true
 Lighting.ShadowSoftness = 0.5        -- Softer shadows for stable look
-Lighting.FogEnd = 200                 -- Moderate fog distance
-Lighting.FogStart = 50               -- Fog starts further out
-Lighting.FogColor = Color3.fromRGB(30, 25, 35)      -- Dark purple-grey fog
+Lighting.FogEnd = 300                 -- Keep distant silhouettes eerie but visible
+Lighting.FogStart = 75               -- Fog begins beyond nearby gameplay space
+Lighting.FogColor = Color3.fromRGB(42, 38, 55)      -- Cool purple-grey fog
 
 -- ============================================
 -- SUBTLE flicker for torch lights only

@@ -9,9 +9,11 @@ local buttonText = button:FindFirstChild("ButtonText")
 local textScale = buttonText and buttonText:FindFirstChild("Label") and buttonText.Label:FindFirstChildOfClass("UIScale")
 local textLabel = buttonText and buttonText:FindFirstChild("Label")
 
-if buttonText and buttonText:IsA("BillboardGui") then
-	buttonText.AlwaysOnTop = false
-	buttonText.MaxDistance = 24
+if buttonText then
+	buttonText:Destroy()
+	buttonText = nil
+	textScale = nil
+	textLabel = nil
 end
 
 local prompt = button:FindFirstChildOfClass("ProximityPrompt")
