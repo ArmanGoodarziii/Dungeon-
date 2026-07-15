@@ -1,6 +1,21 @@
 local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
 
 local FlameTrapModule = {}
+
+local function playIgniteSound(parent: Instance)
+	local template = SoundService:FindFirstChild("Flame Trap Ignite")
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = "Flame Trap Ignite_Playback"
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMinDistance = 8
+	sound.RollOffMaxDistance = 80
+	sound.EmitterSize = 6
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 function FlameTrapModule.Start()
 	local FLAME_ON_TIME = 2
@@ -96,6 +111,7 @@ function FlameTrapModule.Start()
 			fire.Enabled = active
 			light.Enabled = active
 			if active then
+				playIgniteSound(emitter)
 				for _, player in ipairs(Players:GetPlayers()) do
 					if isPlayerOnTrap(player.Character) then
 						killCharacter(player.Character)

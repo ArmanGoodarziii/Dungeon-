@@ -1,4 +1,15 @@
 local FallingFloorModule = {}
+local SoundService = game:GetService("SoundService")
+
+local function playCollapseSound(parent: Instance)
+	local template = SoundService:FindFirstChild("Falling Floor Collapse")
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = "Falling Floor Collapse_Playback"
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 function FallingFloorModule.Start()
 -- Falling Floor Trap Script - No Falling Animation
@@ -319,6 +330,7 @@ local function handleFloorTouched(data, otherPart)
 	end
 
 	dropFloorInstantly(data)
+	playCollapseSound(data.mainPart)
 end
 
 -- Connect every floor independently

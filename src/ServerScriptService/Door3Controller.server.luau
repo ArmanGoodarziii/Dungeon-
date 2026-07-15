@@ -1,11 +1,13 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
 
 local door = workspace:WaitForChild("Door 3")
 local doorPanel = door:WaitForChild("Middle Part")
 local button = door:WaitForChild("OpenButton")
 local buttonText = button:FindFirstChild("ButtonText")
 local textScale = buttonText and buttonText:FindFirstChild("Label") and buttonText.Label:FindFirstChildOfClass("UIScale")
+local textLabel = buttonText and buttonText:FindFirstChild("Label")
 
 if buttonText and buttonText:IsA("BillboardGui") then
 	buttonText.AlwaysOnTop = false
@@ -40,12 +42,19 @@ local openedPanelCFrame = hingeCFrame * CFrame.Angles(0, math.rad(-90), 0) * CFr
 local opened = false
 local opening = false
 local textPulse: Tween? = nil
+local textFlash: Tween? = nil
 
 if textScale then
 	textPulse = TweenService:Create(textScale, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
 		Scale = 1.12,
 	})
 	textPulse:Play()
+end
+if textLabel and textLabel:IsA("TextLabel") then
+	textFlash = TweenService:Create(textLabel, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		TextTransparency = 0.65,
+	})
+	textFlash:Play()
 end
 
 local function openDoor()
@@ -54,9 +63,18 @@ local function openDoor()
 	end
 
 	opening = true
+	local template = SoundService:FindFirstChild("Door Opening")
+	if template and template:IsA("Sound") and template.SoundId ~= "" then
+		local sound = template:Clone()
+		sound.Name = "Door Opening_Playback"
+		sound.Parent = button
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end
 	if textPulse then
 		textPulse:Cancel()
 	end
+	if textFlash then textFlash:Cancel() end
 	if buttonText and buttonText:IsA("LayerCollector") then
 		buttonText.Enabled = false
 	end

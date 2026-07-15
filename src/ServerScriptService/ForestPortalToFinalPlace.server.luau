@@ -2,10 +2,21 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local SoundService = game:GetService("SoundService")
 
 local showFinalPlaceSuccess = ReplicatedStorage:WaitForChild("ShowFinalPlaceSuccess")
 local danceAnimation = ServerStorage:WaitForChild("FinalPlaceDanceAnimation")
 local finishTimer = ServerScriptService:WaitForChild("FinishTimer")
+
+local function playSoundOnce(name: string, parent: Instance)
+	local template = SoundService:FindFirstChild(name)
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = name .. "_Playback"
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 local function findChildByTrimmedName(parent: Instance, expectedName: string): Instance?
 	for _, child in ipairs(parent:GetChildren()) do
@@ -101,6 +112,7 @@ if dancePlatform then
 					return
 				end
 				danceDebounce[player] = true
+				playSoundOnce("Success Jingle", platformPart)
 				playFinalPlaceDance(player, character)
 			end)
 		end
@@ -227,6 +239,18 @@ portal.Touched:Connect(function(hit: BasePart)
 	end
 
 	debounce[player] = true
+	local ambient = SoundService:FindFirstChild("Dungeon Ambient Loop")
+	if ambient and ambient:IsA("Sound") then
+		ambient:Stop()
+	end
+	local teleportSound = SoundService:FindFirstChild("Portal Teleport")
+	if teleportSound and teleportSound:IsA("Sound") and teleportSound.SoundId ~= "" then
+		local playback = teleportSound:Clone()
+		playback.Name = "Portal Teleport_Playback"
+		playback.Parent = portal
+		playback:Play()
+		playback.Ended:Connect(function() playback:Destroy() end)
+	end
 	-- Use only the destination's world position.  FinalPlace has a rotated model
 	-- pivot, so copying its full CFrame can rotate a character onto their head.
 	local finalCFrame, finalSize = finalPlace:GetBoundingBox()

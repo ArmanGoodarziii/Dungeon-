@@ -2,8 +2,19 @@
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
 
 local PendulumModule = {}
+
+local function playImpactSound(parent: Instance)
+	local template = SoundService:FindFirstChild("Pendulum Obstacle Impact")
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = "Pendulum Obstacle Impact_Playback"
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 local function findCharacter(part)
 	local node = part
@@ -131,6 +142,7 @@ function PendulumModule.Start(container)
 						local humanoid = character:FindFirstChildOfClass("Humanoid")
 						if humanoid and humanoid.Health > 0 and not recentlyKilled[character] then
 							recentlyKilled[character] = true
+							playImpactSound(killPart)
 							humanoid.Health = 0
 							task.delay(1, function()
 								recentlyKilled[character] = nil

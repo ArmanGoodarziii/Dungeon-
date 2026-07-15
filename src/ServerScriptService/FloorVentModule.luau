@@ -1,4 +1,15 @@
 local FloorVentModule = {}
+local SoundService = game:GetService("SoundService")
+
+local function playVentSound(parent: Instance)
+	local template = SoundService:FindFirstChild("Floor Vent Opening")
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = "Floor Vent Opening_Playback"
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 function FloorVentModule.Start()
 	local function findHumanoid(part)
@@ -28,6 +39,7 @@ function FloorVentModule.Start()
 			if not humanoid then return end
 
 			triggered = true
+			playVentSound(grateCollision)
 			grateCollision.CanCollide = false
 
 			for _, descendant in ventModel:GetDescendants() do
@@ -95,6 +107,7 @@ function FloorVentModule.Start()
 			if not humanoid then return end
 
 			triggered = true
+			playVentSound(grateCollision)
 			grateCollision.CanCollide = false
 
 			for _, descendant in ventModel:GetDescendants() do

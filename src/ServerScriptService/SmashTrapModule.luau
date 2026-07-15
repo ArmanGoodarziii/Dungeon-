@@ -7,6 +7,46 @@ function SmashTrapModule.Start()
 -- (no forced repositioning or rotation — uses native trap orientation/axis).
 
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local cameraShakeEvent = ReplicatedStorage:FindFirstChild("SmashCameraShake")
+if not cameraShakeEvent then
+	cameraShakeEvent = Instance.new("RemoteEvent")
+	cameraShakeEvent.Name = "SmashCameraShake"
+	cameraShakeEvent.Parent = ReplicatedStorage
+end
+
+local function playSlamEffects(trap)
+	local wallPart = trap.leftWall:FindFirstChildWhichIsA("BasePart", true)
+	local origin = wallPart and wallPart.Position or trap.leftWall:GetPivot().Position
+	local nearby = false
+	for _, player in ipairs(Players:GetPlayers()) do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root and (root.Position - origin).Magnitude <= 100 then
+			nearby = true
+			break
+		end
+	end
+	if not nearby then
+		cameraShakeEvent:FireAllClients(origin)
+		return
+	end
+	local template = SoundService:FindFirstChild("Smash Trap Slam")
+	if template and template:IsA("Sound") and template.SoundId ~= "" then
+		local sound = template:Clone()
+		sound.Name = "Smash Trap Slam_Playback"
+		sound.RollOffMode = Enum.RollOffMode.InverseTapered
+		sound.RollOffMinDistance = 10
+		sound.RollOffMaxDistance = 100
+		sound.EmitterSize = 8
+		sound.Parent = wallPart or workspace.Terrain
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end
+	cameraShakeEvent:FireAllClients(origin)
+end
 
 -- ========== CONFIGURATION ==========
 local TRAP_DELAY = 1.5   -- Seconds between each trap activation
@@ -203,6 +243,7 @@ local function activateTrap(trap)
 	rightSlam:Play()
 
 	leftSlam.Completed:Wait()
+	playSlamEffects(trap)
 
 	checkKillZone(trap)
 

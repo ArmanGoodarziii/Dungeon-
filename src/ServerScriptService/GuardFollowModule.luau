@@ -7,7 +7,18 @@ local random = Random.new()
 local DEFAULT_R6_WALK_ANIMATION = "rbxassetid://180426354"
 local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local ServerStorage = game:GetService("ServerStorage")
+local SoundService = game:GetService("SoundService")
 local captureAnimationId: string? = nil
+
+local function playGuardAttackSound(parent: Instance)
+	local template = SoundService:FindFirstChild("Guard Attack")
+	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+	local sound = template:Clone()
+	sound.Name = "Guard Attack_Playback"
+	sound.Parent = parent
+	sound:Play()
+	sound.Ended:Connect(function() sound:Destroy() end)
+end
 
 local function playCaptureAnimation(humanoid: Humanoid): AnimationTrack?
 	if not captureAnimationId then
@@ -170,6 +181,7 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 
 			local flatOffset = Vector3.new(targetRoot.Position.X - root.Position.X, 0, targetRoot.Position.Z - root.Position.Z)
 			if flatOffset.Magnitude <= captureDistance then
+				playGuardAttackSound(root)
 				local captureTrack = playCaptureAnimation(humanoid)
 				task.wait(0.25)
 				targetHumanoid.Health = 0

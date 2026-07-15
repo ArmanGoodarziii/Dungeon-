@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local ArrowTrap = {}
 
@@ -34,6 +35,15 @@ function ArrowTrap.Start(model)
 	end
 
 	local firing = false
+	local function playShootSound()
+		local template = SoundService:FindFirstChild("Arrow Trap Shoot")
+		if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+		local sound = template:Clone()
+		sound.Name = "Arrow Trap Shoot_Playback"
+		sound.Parent = triggerPlate
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end
 	local function fireArrow()
 		if firing then return end
 		firing = true
@@ -81,6 +91,7 @@ function ArrowTrap.Start(model)
 
 	triggerPlate.Touched:Connect(function(hit)
 		if findHumanoid(hit) then
+			playShootSound()
 			task.spawn(fireArrow)
 		end
 	end)

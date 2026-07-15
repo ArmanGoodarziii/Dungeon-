@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local RotatingBladeModule = {}
 
@@ -21,12 +22,24 @@ function RotatingBladeModule.Start(model)
 	end
 
 	local recentlyKilled = {}
+	local function playBladeHitSound()
+		local template = SoundService:FindFirstChild("Rotating Blade Spin")
+		if not template or not template:IsA("Sound") or template.SoundId == "" then return end
+		local sound = template:Clone()
+		sound.Name = "Rotating Blade Spin_Playback"
+		sound.Looped = false
+		sound.Parent = SoundService
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end
+
 	local function killFromTouch(hit)
 		local humanoid = findHumanoid(hit)
 		if not humanoid or humanoid.Health <= 0 then return end
 		local character = humanoid.Parent
 		if recentlyKilled[character] then return end
 		recentlyKilled[character] = true
+		playBladeHitSound()
 		humanoid.Health = 0
 		task.delay(1, function()
 			recentlyKilled[character] = nil

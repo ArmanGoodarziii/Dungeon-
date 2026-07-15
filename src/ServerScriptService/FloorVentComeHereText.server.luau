@@ -43,6 +43,9 @@ scale.Parent = label
 TweenService:Create(scale, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
 	Scale = 1.12,
 }):Play()
+TweenService:Create(label, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+	TextTransparency = 0.65,
+}):Play()
 
 local grateCollision = vent:FindFirstChild("InvisibleGrateCollision")
 if grateCollision and grateCollision:IsA("BasePart") then

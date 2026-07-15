@@ -1,7 +1,7 @@
 local SoundService = game:GetService("SoundService")
 
 local soundNames = {
-	"Dungeon Ambient Loop", "Timer Start", "Timer Complete", "Checkpoint Activated",
+	"Dungeon Ambient Loop", "Checkpoint Activated", "Respawn on Checkpoint",
 	"Door Opening", "Portal Teleport", "Success Jingle", "Arrow Trap Shoot",
 	"Pendulum Axe Swing", "Flame Trap Ignite", "Rotating Blade Spin", "Smash Trap Slam",
 	"Falling Floor Collapse", "Floor Vent Opening", "Sphere Trap Roll", "Guard Alert", "Guard Attack",

@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
 local GuardFollowModule = require(game:GetService("ServerScriptService"):WaitForChild("GuardFollowModule"))
 
 local GUARDS_BY_INDEX = {
@@ -8,6 +9,26 @@ local GUARDS_BY_INDEX = {
 }
 
 local activePlayers: {[BasePart]: {[Player]: boolean}} = {}
+local alertSounds: {[Player]: Sound} = {}
+
+local function startGuardAlert(player: Player)
+	if alertSounds[player] then return end
+	local template = SoundService:FindFirstChild("Guard Alert")
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not template or not template:IsA("Sound") or template.SoundId == "" or not root then return end
+	local sound = template:Clone()
+	sound.Name = "Guard Alert_Playback"
+	sound.Looped = true
+	sound.Parent = root
+	sound:Play()
+	alertSounds[player] = sound
+end
+
+local function stopGuardAlert(player: Player)
+	local sound = alertSounds[player]
+	alertSounds[player] = nil
+	if sound then sound:Destroy() end
+end
 
 local function trim(value: string): string
 	return string.gsub(value, "^%s*(.-)%s*$", "%1")
@@ -117,6 +138,11 @@ while true do
 				end
 
 				if playerInside then
+					if getTriggerIndex(trigger) == "1" then
+						startGuardAlert(playerInside)
+					elseif getTriggerIndex(trigger) == "3" then
+						-- Keep the alert active through the final trigger; stop it on exit.
+					end
 					startChase(trigger, playerInside)
 					for player in pairs(activePlayers[trigger] or {}) do
 						if player ~= playerInside then
@@ -124,6 +150,11 @@ while true do
 						end
 					end
 				else
+					if getTriggerIndex(trigger) == "3" then
+						for player in pairs(activePlayers[trigger] or {}) do
+							stopGuardAlert(player)
+						end
+					end
 					for player in pairs(activePlayers[trigger] or {}) do
 						stopChase(trigger, player)
 					end

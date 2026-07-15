@@ -8,7 +8,16 @@
 --   KillDamage (number) - Damage dealt on contact, 0 = instant kill (default: 0)
 
 local SphereTrapModule = {}
+local SoundService = game:GetService("SoundService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 SphereTrapModule.__index = SphereTrapModule
+
+local cameraShakeEvent = ReplicatedStorage:FindFirstChild("SmashCameraShake")
+if not cameraShakeEvent then
+	cameraShakeEvent = Instance.new("RemoteEvent")
+	cameraShakeEvent.Name = "SmashCameraShake"
+	cameraShakeEvent.Parent = ReplicatedStorage
+end
 
 -- Default configuration values
 local DEFAULT_SPEED = 20
@@ -123,6 +132,19 @@ end
 function SphereTrapModule:Activate()
 	if self.isActive or self.onCooldown or not self.sphere then return end
 	self.isActive = true
+	local template = SoundService:FindFirstChild("Sphere Trap Roll")
+	if template and template:IsA("Sound") and template.SoundId ~= "" then
+		local sound = template:Clone()
+		sound.Name = "Sphere Trap Roll_Playback"
+		sound.RollOffMode = Enum.RollOffMode.InverseTapered
+		sound.RollOffMinDistance = 8
+		sound.RollOffMaxDistance = 90
+		sound.EmitterSize = 6
+		sound.Parent = self.sphere
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end
+	cameraShakeEvent:FireAllClients(self.sphere.Position)
 
 	self:_setActiveState()
 
