@@ -1,14 +1,10 @@
 local SoundService = game:GetService("SoundService")
 
 local soundNames = {
-	"Dungeon Ambient Loop", "Dungeon Room Ambience", "Forest Ambient Loop", "Final Place Ambient Loop",
-	"Player Footsteps - Stone", "Player Footsteps - Grass", "Timer Start", "Timer Tick", "Timer Warning", "Timer Complete",
-	"Checkpoint Activated", "Checkpoint Respawn", "Door Opening", "Door Closing", "Portal Activation", "Teleport Whoosh",
-	"Success Jingle", "Victory Dance Music", "Arrow Trap Shoot", "Arrow Trap Impact", "Pendulum Axe Swing", "Pendulum Axe Impact",
-	"Pendulum Swing", "Flame Trap Ignite", "Flame Trap Burst", "Rotating Blade Spin", "Blade Trap Impact", "Smash Trap Slam",
-	"Smash Trap Retract", "Falling Floor Crack", "Falling Floor Collapse", "Floor Vent Opening", "Sphere Trap Roll",
-	"Sphere Trap Impact", "Guard Footsteps", "Guard Alert", "Guard Attack", "Guard Capture", "Player Death",
-	"UI Button Hover", "UI Button Click",
+	"Dungeon Ambient Loop", "Timer Start", "Timer Complete", "Checkpoint Activated",
+	"Door Opening", "Portal Teleport", "Success Jingle", "Arrow Trap Shoot",
+	"Pendulum Axe Swing", "Flame Trap Ignite", "Rotating Blade Spin", "Smash Trap Slam",
+	"Falling Floor Collapse", "Floor Vent Opening", "Sphere Trap Roll", "Guard Alert", "Guard Attack",
 }
 
 for _, name in ipairs(soundNames) do
