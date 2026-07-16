@@ -132,7 +132,9 @@ function PendulumModule.Start(container)
 		for _, trap in ipairs(trapData) do
 			for _, killPart in ipairs(trap.killParts) do
 				local success, touching = pcall(function()
-					return workspace:GetPartsInPart(killPart, overlapParams)
+					-- Use a slightly inset query volume so the visual head can swing
+					-- near a player without counting its decorative outer edges as a hit.
+					return workspace:GetPartBoundsInBox(killPart.CFrame, killPart.Size * 0.82, overlapParams)
 				end)
 				if not success then continue end
 

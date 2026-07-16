@@ -144,7 +144,8 @@ function SphereTrapModule:Activate()
 		sound:Play()
 		sound.Ended:Connect(function() sound:Destroy() end)
 	end
-	cameraShakeEvent:FireAllClients(self.sphere.Position)
+	-- Sphere impacts are heavier than the standard smash-wall shake.
+	cameraShakeEvent:FireAllClients(self.sphere.Position, "Sphere")
 
 	self:_setActiveState()
 

@@ -113,6 +113,9 @@ local function getPlayerParts(player: Player): (Humanoid?, BasePart?)
 end
 
 local function prepareGuard(guard: Model, humanoid: Humanoid, root: BasePart)
+	-- Knights should not show Roblox nameplates while acting as dungeon traps.
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.NameDisplayDistance = 0
 	-- The toolbox NPCs include separate animation controllers that fight the
 	-- shared guard walk track.  Keep movement animation under this module only.
 	for _, descendant in ipairs(guard:GetDescendants()) do
@@ -169,8 +172,10 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 	local token = (activeChases[guard] or 0) + 1
 	activeChases[guard] = token
 	prepareGuard(guard, humanoid, root)
-	humanoid.WalkSpeed = (options and options.WalkSpeed) or guard:GetAttribute("ChaseSpeed") or 13
-	local captureDistance = (options and options.CaptureDistance) or 5
+	humanoid.WalkSpeed = (options and options.WalkSpeed) or guard:GetAttribute("ChaseSpeed") or 10
+	-- Capture only when the two root parts are genuinely close.  The old
+	-- five-stud radius could kill players before the knight visually reached them.
+	local captureDistance = (options and options.CaptureDistance) or guard:GetAttribute("CaptureDistance") or 1
 	local isTargetValid = options and options.IsTargetValid
 	local walkTrack = startWalkAnimation(guard, humanoid)
 
@@ -184,8 +189,8 @@ function GuardFollowModule.Start(guard: Model, player: Player, options: {[string
 				break
 			end
 
-			local flatOffset = Vector3.new(targetRoot.Position.X - root.Position.X, 0, targetRoot.Position.Z - root.Position.Z)
-			if flatOffset.Magnitude <= captureDistance then
+			local offset = targetRoot.Position - root.Position
+			if offset.Magnitude <= captureDistance then
 				playGuardAttackSound(root)
 				local captureTrack = playCaptureAnimation(humanoid)
 				task.wait(0.25)

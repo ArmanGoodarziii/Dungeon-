@@ -5,20 +5,28 @@ local Lighting = game:GetService("Lighting")
 -- Stable dungeon lighting properties
 -- Balanced for consistent visibility across all zones
 -- ============================================
-Lighting.ClockTime = 14              -- Daytime base for stable ambient
-Lighting.Brightness = 2.0            -- Clear visibility while retaining a dark mood
-Lighting.ExposureCompensation = 0.15  -- Slight lift for shadowed corridors
-Lighting.EnvironmentDiffuseScale = 0.6
-Lighting.EnvironmentSpecularScale = 0.6
-Lighting.Ambient = Color3.fromRGB(92, 88, 108)       -- Cool fill so geometry remains readable
-Lighting.OutdoorAmbient = Color3.fromRGB(78, 74, 94) -- Darker outdoor contrast
-Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
-Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+Lighting.ClockTime = 0.35            -- Moonlit night base
+Lighting.Brightness = 1.35           -- Dark atmosphere with readable paths
+Lighting.ExposureCompensation = 0.05 -- Preserve torch contrast without blacking out rooms
+Lighting.EnvironmentDiffuseScale = 0.45
+Lighting.EnvironmentSpecularScale = 0.5
+Lighting.Ambient = Color3.fromRGB(48, 52, 78)        -- Cool moonlit fill
+Lighting.OutdoorAmbient = Color3.fromRGB(30, 33, 52)  -- Deep blue night shadows
+Lighting.ColorShift_Bottom = Color3.fromRGB(4, 5, 14)
+Lighting.ColorShift_Top = Color3.fromRGB(8, 10, 24)
 Lighting.GlobalShadows = true
 Lighting.ShadowSoftness = 0.5        -- Softer shadows for stable look
-Lighting.FogEnd = 300                 -- Keep distant silhouettes eerie but visible
-Lighting.FogStart = 75               -- Fog begins beyond nearby gameplay space
-Lighting.FogColor = Color3.fromRGB(42, 38, 55)      -- Cool purple-grey fog
+Lighting.FogEnd = 260                 -- Keep distant silhouettes eerie but visible
+Lighting.FogStart = 65                -- Fog begins beyond nearby gameplay space
+Lighting.FogColor = Color3.fromRGB(24, 27, 48)       -- Blue-black night fog
+
+local sky = Lighting:FindFirstChildOfClass("Sky")
+if sky then
+	sky.CelestialBodiesShown = true
+	sky.StarCount = 2200
+	sky.SunAngularSize = 0
+	sky.MoonAngularSize = 8
+end
 
 -- ============================================
 -- SUBTLE flicker for torch lights only
@@ -37,6 +45,9 @@ if torchesFolder then
 			local light = torchPart:FindFirstChildOfClass("PointLight")
 			local flame = torchModel:FindFirstChild("Flame")
 			if light then
+				if torchModel.Name:match("^ForestTorch") then
+					light.Brightness = 5
+				end
 				table.insert(flickerLights, {
 					light = light,
 					baseBrightness = light.Brightness,

@@ -173,28 +173,46 @@ local function killPlayer(humanoid)
 	end
 end
 
-local overlapParams = OverlapParams.new()
-overlapParams.MaxParts = 30
-
-local function checkKillZone(trap)
+-- Only the passage between the two moving walls is lethal.  The previous
+-- broad overlap box also covered the approach and exit sides of the trap,
+-- which killed players before they entered or after they had passed it.
+local function isRootInKillZone(trap, root: BasePart): boolean
 	local leftPivot = trap.leftWall:GetPivot()
 	local rightPivot = trap.rightWall:GetPivot()
 	local leftPos = leftPivot.Position
 	local rightPos = rightPivot.Position
-
 	local midPos = (leftPos + rightPos) / 2
 	local diff = rightPos - leftPos
 	local gapLength = diff.Magnitude
+	if gapLength <= 0.01 then
+		return false
+	end
 
-	if gapLength > 0 then
-		local zoneCFrame = CFrame.lookAt(midPos, rightPos)
-		local zoneSize = Vector3.new(12, 20, gapLength)
-		local touching = workspace:GetPartBoundsInBox(zoneCFrame, zoneSize, overlapParams)
-		for _, part in touching do
-			local humanoid = getHumanoidFromPart(part)
-			if humanoid then
-				killPlayer(humanoid)
-			end
+	local direction = diff.Unit
+	local along = (root.Position - midPos):Dot(direction)
+	-- Leave a small margin at each wall face so the approach and exit sides
+	-- are never included in the lethal zone.
+	local halfLength = math.max(1.25, gapLength / 2 - 1.25)
+	if math.abs(along) > halfLength then
+		return false
+	end
+
+	local sideAxis = Vector3.yAxis:Cross(direction)
+	if sideAxis.Magnitude < 0.01 then
+		sideAxis = Vector3.xAxis:Cross(direction)
+	end
+	sideAxis = sideAxis.Unit
+	local sideDistance = math.abs((root.Position - midPos):Dot(sideAxis))
+	return sideDistance <= 6 and math.abs(root.Position.Y - midPos.Y) <= 8
+end
+
+local function checkKillZone(trap)
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if humanoid and root and root:IsA("BasePart") and isRootInKillZone(trap, root) then
+			killPlayer(humanoid)
 		end
 	end
 end
@@ -207,7 +225,9 @@ for _, trap in ipairs(traps) do
 				desc.Touched:Connect(function(otherPart)
 					if not trap.isActive then return end
 					local humanoid = getHumanoidFromPart(otherPart)
-					if humanoid then
+					local character = humanoid and humanoid.Parent
+					local root = character and character:FindFirstChild("HumanoidRootPart")
+					if humanoid and root and root:IsA("BasePart") and isRootInKillZone(trap, root) then
 						killPlayer(humanoid)
 					end
 				end)

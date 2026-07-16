@@ -1,14 +1,10 @@
 local Players = game:GetService("Players")
-local SoundService = game:GetService("SoundService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CheckpointModule = {}
 local playerCheckpoints: {[Player]: {order: number, cframe: CFrame}} = {}
-local initialSpawnHandled: {[Player]: boolean} = {}
 local configuredCheckpoints: {[Instance]: boolean} = {}
 local totalCheckpoints = 0
 local checkpointEvent: RemoteEvent
-local movementLockEvent: RemoteEvent
 
 local function playCheckpointSound(parent: Instance)
 	local template = SoundService:FindFirstChild("Checkpoint Activated")
@@ -18,38 +14,6 @@ local function playCheckpointSound(parent: Instance)
 	sound.Parent = parent
 	sound:Play()
 	sound.Ended:Connect(function() sound:Destroy() end)
-end
-
-local function playRespawnSound(parent: Instance)
-	local template = SoundService:FindFirstChild("Respawn on Checkpoint")
-	if not template or not template:IsA("Sound") or template.SoundId == "" then return end
-	local sound = template:Clone()
-	sound.Name = "Respawn on Checkpoint_Playback"
-	sound.Parent = parent
-	sound:Play()
-	sound.Ended:Connect(function() sound:Destroy() end)
-end
-
-local function freezeCharacter(player: Player, character: Model, duration: number)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
-	local oldWalkSpeed = humanoid.WalkSpeed
-	local oldJumpPower = humanoid.JumpPower
-	local oldJumpHeight = humanoid.JumpHeight
-	local oldAutoRotate = humanoid.AutoRotate
-	humanoid.WalkSpeed = 0
-	humanoid.JumpPower = 0
-	humanoid.JumpHeight = 0
-	humanoid.AutoRotate = false
-	if movementLockEvent then movementLockEvent:FireClient(player, duration) end
-	task.delay(duration, function()
-		if humanoid.Parent and humanoid.Health > 0 then
-			humanoid.WalkSpeed = oldWalkSpeed
-			humanoid.JumpPower = oldJumpPower
-			humanoid.JumpHeight = oldJumpHeight
-			humanoid.AutoRotate = oldAutoRotate
-		end
-	end)
 end
 
 local function getCheckpointCFrame(checkpoint: Instance): CFrame?
@@ -132,12 +96,6 @@ end
 
 function CheckpointModule.Initialize(folder: Folder, event: RemoteEvent)
 	checkpointEvent = event
-	movementLockEvent = ReplicatedStorage:FindFirstChild("MovementLockCountdown")
-	if not movementLockEvent then
-		movementLockEvent = Instance.new("RemoteEvent")
-		movementLockEvent.Name = "MovementLockCountdown"
-		movementLockEvent.Parent = ReplicatedStorage
-	end
 	totalCheckpoints = 0
 	for _, checkpoint in ipairs(folder:GetChildren()) do
 		if checkpoint:FindFirstChild("Order") then
@@ -156,23 +114,16 @@ function CheckpointModule.Initialize(folder: Folder, event: RemoteEvent)
 	local function onCharacterAdded(player: Player, character: Model)
 		local saved = playerCheckpoints[player]
 		if not saved then
-			if not initialSpawnHandled[player] then
-				initialSpawnHandled[player] = true
-				freezeCharacter(player, character, 10)
-			end
 			return
 		end
 		local root = character:WaitForChild("HumanoidRootPart", 5)
 		if root and root:IsA("BasePart") then
 			root.CFrame = saved.cframe
-			playRespawnSound(root)
 		end
-		freezeCharacter(player, character, 3)
 	end
 
 	local function onPlayerAdded(player: Player)
 		playerCheckpoints[player] = nil
-		initialSpawnHandled[player] = false
 		player.CharacterAdded:Connect(function(character)
 			onCharacterAdded(player, character)
 		end)
@@ -184,7 +135,6 @@ function CheckpointModule.Initialize(folder: Folder, event: RemoteEvent)
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(function(player)
 		playerCheckpoints[player] = nil
-		initialSpawnHandled[player] = nil
 	end)
 	for _, player in ipairs(Players:GetPlayers()) do
 		onPlayerAdded(player)

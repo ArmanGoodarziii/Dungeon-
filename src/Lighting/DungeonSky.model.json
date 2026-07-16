@@ -7,10 +7,10 @@
     "SkyboxLf": "",
     "SkyboxRt": "",
     "SkyboxUp": "",
-    "CelestialBodiesShown": false,
-    "StarCount": 0,
+    "CelestialBodiesShown": true,
+    "StarCount": 2200,
     "SunAngularSize": 0,
-    "MoonAngularSize": 0,
+    "MoonAngularSize": 8,
     "SkyboxOrientation": [0, 180, 0]
   }
 }

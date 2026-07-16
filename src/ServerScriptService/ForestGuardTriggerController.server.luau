@@ -97,7 +97,7 @@ local function startChase(trigger: BasePart, player: Player)
 	activePlayers[trigger][player] = true
 	for _, guard in ipairs(guards) do
 		GuardFollowModule.Start(guard, player, {
-			CaptureDistance = 5,
+			CaptureDistance = 1,
 			IsTargetValid = function(targetPlayer: Player)
 				return playerIsInside(targetPlayer, trigger)
 			end,
